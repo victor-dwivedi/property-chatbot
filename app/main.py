@@ -161,7 +161,7 @@ def retrieve(q, k=TOP_K):
     want_dg = any(w in ql for w in ["darglobal", "dar global", "trump", "project", "developer", "missoni", "aida", "w residences"])
     want_ws = "wasalt" in ql
     purpose = "rent" if re.search(r"\brent|lease|rental", ql) else ("sale" if re.search(r"\b(buy|sale|purchase)", ql) else None)
-    beds = re.search(r"(\d+)\s*(?:bed|br|bhk|bedroom)", ql)
+    beds = re.search(r"(\d+)\s*\+?\s*(?:bed|br|bhk|bedroom)", ql)
     budget = parse_budget(q)
     ranked = []
     for i, d in enumerate(DOCS):
@@ -179,8 +179,12 @@ def retrieve(q, k=TOP_K):
                 s += 4
             if purpose and d.get("purpose") == purpose:
                 s += 1.5
-            if beds and str(d.get("bedrooms")) == beds.group(1):
-                s += 2
+            if beds and d.get("bedrooms") not in (None, ""):
+                want = int(beds.group(1))
+                have = [int(x) for x in re.findall(r"\d+", str(d["bedrooms"]))]  # e.g. 3 or "3, 4"
+                plus = bool(re.search(r"\d+\s*\+|or more|at least", ql))
+                if have:
+                    s += 6 if (want in have or (plus and max(have) >= want)) else -3
             if budget and d.get("price"):
                 try:
                     s += 2 if float(d["price"]) <= budget else -4
@@ -218,7 +222,7 @@ Rules:
 - When recommending listings, give title, location, price, key specs and the URL as a markdown link.
 - Cite the source on every factual answer, e.g. "Source: Wasalt.sa" or "Source: DarGlobal".
 - Prices/availability may have changed since scraping — remind the user to verify on the live site.
-- The UI automatically shows a photo card (price, location, specs) for every listing/project URL you link,
+- The UI automatically shows a card (price, location, specs) for every listing/project URL you link,
   so keep the text short: one intro line, then up to 6 bullets of the form
   "**Title** — District, City — Price — key specs — [View](URL)". Do NOT use tables.
 - Be concise; use bullet points for lists. Reply in the user's language (English or Arabic)."""
@@ -304,7 +308,7 @@ def card(d):
         price, per = rent_info(d)
         return {"source": "wasalt", "url": d.get("url"), "title": d.get("title"),
                 "image": (d.get("images") or [None])[0], "images": d.get("images") or [],
-                "price": f"{money(price)} {d.get('currency') or 'SAR'}" + (f" {per}" if per else "") if price else "Price on request",
+                "price": f"{money(price)} {d.get('currency') or 'SAR'}" + ({"per year": "/yr", "per month": "/mo", "per day": "/day"}.get(per, f" {per}") if per else "") if price else "Price on request",
                 "location": ", ".join(x for x in [d.get("district"), (d.get("city_slug") or d.get("city") or "").replace("-", " ").title()] if x),
                 "type": d.get("sub_type"), "purpose": d.get("purpose"),
                 "beds": d.get("bedrooms"), "baths": d.get("bathrooms"),

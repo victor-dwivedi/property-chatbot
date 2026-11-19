@@ -77,7 +77,29 @@ main{flex:1;overflow-y:auto;scroll-behavior:smooth}
 @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 .wait{font-size:12px;color:var(--muted);margin-inline-start:8px}
 
-/* property cards */
+/* compact property cards (no photos) */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:12px}
+.pc{display:flex;gap:12px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .15s,border-color .15s;min-width:0}
+.pc:hover{transform:translateY(-2px);border-color:var(--gold)}
+.pc .ti{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:none;background:var(--gold-soft)}
+.pc.wasalt .ti{background:var(--wasalt-soft)}
+.pc .pb{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.pc .row1{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pc .pr{font-weight:700;font-size:15px;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .badge{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;flex:none;text-transform:capitalize}
+.badge.sale{background:var(--gold-soft);color:var(--gold)}.badge.rent{background:var(--wasalt-soft);color:var(--wasalt)}.badge.project{background:var(--dg-soft);color:var(--dg)}
+.pc .nm{font-weight:600;font-size:13.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .lc{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .sm{font-size:12.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chips2{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chips2 span{font-size:11.5px;padding:2px 8px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.pc .go{font-size:12px;font-weight:600;color:var(--gold);margin-top:6px}
+.follow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.follow button{font:inherit;font-size:12.5px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.follow button:hover{border-color:var(--gold);color:var(--gold)}
+.copy{background:none;border:0;color:var(--muted);cursor:pointer;font:inherit;font-size:11.5px;padding:0}
+.copy:hover{color:var(--gold)}
+/* property cards with photos (unused) */
 .cards{display:flex;gap:12px;overflow-x:auto;padding:12px 2px 6px;scroll-snap-type:x mandatory}
 .cards::-webkit-scrollbar{height:6px}.cards::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
 .card{flex:0 0 250px;scroll-snap-align:start;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
@@ -204,6 +226,29 @@ function cardHTML(c){
       <div class="cta">View on ${c.source==='wasalt'?'Wasalt.sa':'DarGlobal'} →</div>
     </div></a>`;
 }
+function compactHTML(c){
+  const wa=c.source==='wasalt';
+  const icon=wa?(ICON[(c.type||'').toLowerCase()]||'🏠'):'🌇';
+  const badge=wa?(c.purpose||''):'project';
+  const specs=wa?[c.type,c.beds&&`${c.beds} bed`,c.baths&&`${c.baths} bath`,c.area&&`${Math.round(c.area)} m²`].filter(Boolean):[];
+  return `<a class="pc ${c.source}" href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener">
+    <div class="ti">${icon}</div>
+    <div class="pb">
+      <div class="row1"><span class="pr">${esc(wa?c.price:(c.title||'DarGlobal'))}</span>${badge?`<span class="badge ${esc(badge)}">${esc(wa?'for '+badge:'DarGlobal')}</span>`:''}</div>
+      ${wa?`<div class="nm">${esc(c.title)}</div>`:''}
+      ${c.location?`<div class="lc">📍 ${esc(c.location)}</div>`:''}
+      ${!wa&&c.summary?`<div class="sm">${esc(c.summary)}</div>`:''}
+      ${specs.length?`<div class="chips2">${specs.map(s=>`<span>${esc(s)}</span>`).join('')}</div>`:''}
+      <div class="go">View on ${wa?'Wasalt.sa':'DarGlobal'} →</div>
+    </div></a>`;
+}
+function followUps(text,cards){
+  const ar=isAr(text), wa=cards.some(c=>c.source==='wasalt'), dg=cards.some(c=>c.source==='darglobal')||/darglobal|trump|project/i.test(text);
+  if(ar)return['أرخص الخيارات','للبيع بدلاً من ذلك','في مدينة أخرى'];
+  if(wa)return['Show cheaper options','Only ones with 3+ bedrooms','Same in another city'];
+  if(dg)return['What amenities are included?','Payment plans?','Other DarGlobal projects'];
+  return['Apartments for rent in Jeddah','DarGlobal projects in Dubai'];
+}
 inner.addEventListener('click',e=>{ // cycle photos without leaving the page
   const cnt=e.target.closest('.count'); if(!cnt)return; e.preventDefault();
   const img=cnt.parentElement.querySelector('img'); if(!img)return;
@@ -237,8 +282,14 @@ async function send(text){
     const j=await r.json(); if(!r.ok)throw new Error(j.detail||r.statusText);
     const body=p.querySelector('.body'), bub=p.querySelector('.bubble');
     if(isAr(j.answer))bub.setAttribute('dir','rtl');
-    bub.innerHTML=md(j.answer)+`<div class="meta"><span>⚡ ${esc((j.model||'').split('/').pop())}</span><span>${j.latency_s}s</span></div>`;
-    if(j.cards&&j.cards.length){const c=document.createElement('div');c.className='cards';c.innerHTML=j.cards.map(cardHTML).join('');body.appendChild(c)}
+    bub.innerHTML=md(j.answer)+`<div class="meta"><span>⚡ ${esc((j.model||'').split('/').pop().replace(':free',''))}</span><span>${j.latency_s}s</span><button class="copy" type="button">Copy</button></div>`;
+    bub.querySelector('.copy').onclick=ev=>{navigator.clipboard?.writeText(j.answer).then(()=>{ev.target.textContent='Copied ✓';setTimeout(()=>ev.target.textContent='Copy',1500)}).catch(()=>{})};
+    const cards=j.cards||[];
+    if(cards.length){const g=document.createElement('div');g.className='grid';g.innerHTML=cards.map(compactHTML).join('');body.appendChild(g)}
+    const f=document.createElement('div');f.className='follow';
+    f.innerHTML=followUps(text,cards).map(x=>`<button type="button"${isAr(x)?' dir="rtl"':''}>${esc(x)}</button>`).join('');
+    f.querySelectorAll('button').forEach(x=>x.onclick=()=>{f.remove();send(x.textContent)});
+    inner.querySelectorAll('.follow').forEach(x=>x.remove()); body.appendChild(f);
     history.push({role:'user',content:text},{role:'assistant',content:j.answer});
   }catch(e){p.querySelector('.bubble').innerHTML=`<span style="color:#c0392b">Sorry, something went wrong: ${esc(e.message||e)}</span><div class="meta">Please try again in a moment.</div>`}
   clearInterval(tick); busy=false; b.disabled=false; q.focus(); log.scrollTop=log.scrollHeight;
