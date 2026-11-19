@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: property-chatbot
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false        # paste in Render dashboard
+      - key: HF_TOKEN
+        sync: false        # paste in Render dashboard (reads the private data set)
+      - key: DATA_REPO
+        value: victordwivedi/property-chatbot-data

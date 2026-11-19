@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Property Chatbot</title>
+<style>
+:root{--bg:#f6f5f2;--panel:#fff;--ink:#1d1d1b;--muted:#6b6a66;--line:#e4e2dc;--accent:#8a6d3b;--user:#1d1d1b;--user-ink:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--panel:#1e1e1c;--ink:#ecebe6;--muted:#9a9890;--line:#2e2e2b;--accent:#c9a46a;--user:#ecebe6;--user-ink:#141413}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{margin:0;font-size:17px;font-weight:600}header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+main{flex:1;overflow-y:auto;padding:16px}
+.wrap{max-width:760px;margin:0 auto}
+.msg{margin:0 0 14px;display:flex}.msg.user{justify-content:flex-end}
+.bubble{max-width:85%;padding:10px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);overflow-wrap:anywhere}
+.user .bubble{background:var(--user);color:var(--user-ink);border-color:var(--user)}
+.bubble p{margin:.3em 0}.bubble ul{margin:.3em 0;padding-left:1.2em}.bubble a{color:var(--accent)}
+.meta{font-size:12px;color:var(--muted);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
+.chips button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+form{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--panel)}
+form .wrap{display:flex;gap:8px;width:100%}
+textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--ink);min-height:44px;max-height:140px}
+button.send{border:0;border-radius:10px;padding:0 18px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>DarGlobal &amp; Wasalt Property Assistant</h1><p id="stats">Answers from publicly scraped listings and project pages · free model via OpenRouter</p></div></header>
+<main id="log"><div class="wrap" id="inner">
+  <div class="msg"><div class="bubble">Hi! Ask me about DarGlobal projects or Wasalt listings in Saudi Arabia: prices, locations, bedrooms, amenities.</div></div>
+  <div class="chips" id="chips">
+    <button>3-bedroom apartments for rent in Riyadh</button>
+    <button>Villas for sale in Jeddah under 2 million SAR</button>
+    <button>Which countries does DarGlobal have projects in?</button>
+    <button>Cheapest land for sale in Dammam</button>
+  </div>
+</div></main>
+<form id="f"><div class="wrap"><textarea id="q" rows="1" placeholder="Ask about a property…" required></textarea><button class="send" id="b">Send</button></div></form>
+<script>
+const inner=document.getElementById('inner'),log=document.getElementById('log'),q=document.getElementById('q'),b=document.getElementById('b');
+const history=[];
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function md(s){ // tiny, safe markdown: links, bold, bullets, paragraphs
+  s=esc(s).replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+   .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+   .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  let out='',inList=false;
+  for(const line of s.split('\n')){const m=line.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)/);
+    if(m){if(!inList){out+='<ul>';inList=true}out+='<li>'+m[1]+'</li>'}
+    else{if(inList){out+='</ul>';inList=false}if(line.trim())out+='<p>'+line+'</p>'}}
+  return out+(inList?'</ul>':'');
+}
+function add(role,html,meta){const d=document.createElement('div');d.className='msg '+role;
+  d.innerHTML='<div class="bubble">'+html+(meta?'<div class="meta">'+meta+'</div>':'')+'</div>';inner.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+async function send(text){
+  if(!text.trim())return; document.getElementById('chips')?.remove();
+  add('user',esc(text)); q.value=''; b.disabled=true;
+  const p=add('bot','<span class="meta">Thinking…</span>');
+  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history})});
+    const j=await r.json(); if(!r.ok)throw new Error(j.detail||r.statusText);
+    p.querySelector('.bubble').innerHTML=md(j.answer)+'<div class="meta">'+esc(j.model)+' · '+j.latency_s+'s</div>';
+    history.push({role:'user',content:text},{role:'assistant',content:j.answer});
+  }catch(e){p.querySelector('.bubble').innerHTML='<span class="meta">Error: '+esc(String(e.message||e))+'</span>'}
+  b.disabled=false; q.focus(); log.scrollTop=log.scrollHeight;
+}
+document.getElementById('f').onsubmit=e=>{e.preventDefault();send(q.value)};
+q.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(q.value)}});
+document.querySelectorAll('#chips button').forEach(x=>x.onclick=()=>send(x.textContent));
+fetch('/api/stats').then(r=>r.json()).then(j=>{const s=j.sources||{};document.getElementById('stats').textContent=`${s.darglobal||0} DarGlobal pages · ${s.wasalt||0} Wasalt listings · free model via OpenRouter`}).catch(()=>{});
+</script>
+</body>
+</html>
