@@ -218,6 +218,9 @@ Rules:
 - When recommending listings, give title, location, price, key specs and the URL as a markdown link.
 - Cite the source on every factual answer, e.g. "Source: Wasalt.sa" or "Source: DarGlobal".
 - Prices/availability may have changed since scraping — remind the user to verify on the live site.
+- The UI automatically shows a photo card (price, location, specs) for every listing/project URL you link,
+  so keep the text short: one intro line, then up to 6 bullets of the form
+  "**Title** — District, City — Price — key specs — [View](URL)". Do NOT use tables.
 - Be concise; use bullet points for lists. Reply in the user's language (English or Arabic)."""
 
 
@@ -233,7 +236,7 @@ async def complete(messages):
                                      headers={"Authorization": f"Bearer {OPENROUTER_KEY}",
                                               "HTTP-Referer": os.getenv("APP_URL", "https://localhost"),
                                               "X-Title": "Property Chatbot"},
-                                     json={"model": model, "messages": messages, "temperature": 0.2, "max_tokens": 900})
+                                     json={"model": model, "messages": messages, "temperature": 0.2, "max_tokens": 1600})
                     j = r.json()
                     if r.status_code == 200 and j.get("choices"):
                         txt = (j["choices"][0]["message"].get("content") or "").strip()
@@ -293,4 +296,33 @@ async def chat(req: ChatReq):
     t = time.time()
     answer, model = await complete(messages)
     return {"answer": answer, "model": model, "latency_s": round(time.time() - t, 2),
-            "sources": [{"title": h.get("title"), "url": h.get("url"), "source": h.get("source")} for h in hits[:6]]}
+            "cards": cards_for(answer, hits)}
+
+
+def card(d):
+    if d.get("source") == "wasalt":
+        price, per = rent_info(d)
+        return {"source": "wasalt", "url": d.get("url"), "title": d.get("title"),
+                "image": (d.get("images") or [None])[0], "images": d.get("images") or [],
+                "price": f"{money(price)} {d.get('currency') or 'SAR'}" + (f" {per}" if per else "") if price else "Price on request",
+                "location": ", ".join(x for x in [d.get("district"), (d.get("city_slug") or d.get("city") or "").replace("-", " ").title()] if x),
+                "type": d.get("sub_type"), "purpose": d.get("purpose"),
+                "beds": d.get("bedrooms"), "baths": d.get("bathrooms"),
+                "area": d.get("built_up_area_sqm") or d.get("land_area_sqm")}
+    return {"source": "darglobal", "url": d.get("url"), "title": d.get("title") or "DarGlobal",
+            "image": (d.get("images") or [None])[0], "images": d.get("images") or [],
+            "summary": (d.get("text") or "")[:160], "type": d.get("kind")}
+
+
+def cards_for(answer, hits, limit=8):
+    """Cards for the documents the model actually referenced (by URL), in the order it mentioned them."""
+    pos = {}
+    for h in hits:
+        u = (h.get("url") or "").rstrip("/")
+        i = answer.find(u) if u else -1
+        if i >= 0 and u not in pos:
+            pos[u] = (i, h)
+    chosen = [h for _, h in sorted(pos.values(), key=lambda x: x[0])]
+    if not chosen:  # model cited nothing by link: show top listing hits only when it clearly listed properties
+        chosen = [h for h in hits if h.get("source") == "wasalt"][:4] if re.search(r"SAR|ريال", answer) else []
+    return [card(h) for h in chosen[:limit]]

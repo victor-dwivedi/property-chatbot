@@ -61,6 +61,14 @@ def attr(p, key):
     return None
 
 
+IMG = "https://imagedelivery.net/1DNKFJPRaeUdy_j8F7HT3w/production/properties/{id}/images/{f}/width=640,quality=60,format=auto"
+
+
+def images(p):
+    files = ((p.get("propertyFiles") or {}).get("images") or []) if isinstance(p.get("propertyFiles"), dict) else []
+    return [IMG.format(id=p.get("id"), f=f) for f in files if isinstance(f, str)][:4]
+
+
 def clean(p, page_url):
     info = p.get("propertyInfo") if isinstance(p.get("propertyInfo"), dict) else {}
     pf = info.get("propertyFor")
@@ -87,6 +95,7 @@ def clean(p, page_url):
         "age": attr(p, "completionYear"),
         "furnishing": info.get("furnishingType"),
         "amenities": [a.get("name") if isinstance(a, dict) else str(a) for a in (p.get("featureAmenities") or []) if a],
+        "images": images(p),
         "verified": p.get("isVerified"),
         "published_at": p.get("publishedAt"),
         "city_slug": (re.search(r"-in-([a-z-]+)$", page_url) or [None, None])[1],  # e.g. "taif"

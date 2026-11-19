@@ -34,6 +34,19 @@ def blocked(html):
 
 def parse(url, html):
     s = BeautifulSoup(html, "lxml")
+    imgs = []
+    og = s.find("meta", attrs={"property": "og:image"})
+    if og and og.get("content"):
+        imgs.append(og["content"])
+    for im in s.find_all("img"):
+        src = im.get("src") or im.get("data-src") or ""
+        if src.startswith("//"):
+            src = "https:" + src
+        elif src.startswith("/"):
+            src = "https://darglobal.co.uk" + src
+        if src.startswith("http") and re.search(r"\.(jpe?g|webp|png)(\?|$)", src, re.I) \
+                and not re.search(r"logo|icon|flag|avatar|sprite|placeholder", src, re.I) and src not in imgs:
+            imgs.append(src)
     for t in s(["script", "style", "noscript", "svg", "header", "footer", "nav", "form", "iframe"]):
         t.decompose()
     title = (s.title.string if s.title else "") or ""
@@ -50,7 +63,8 @@ def parse(url, html):
     text = ((desc["content"] + "\n") if desc and desc.get("content") else "") + "\n".join(lines)
     kind = "article" if re.search(r"/(blog|press|insights)/", url) else "project/page"
     return {"source": "darglobal", "url": url, "kind": kind,
-            "title": title.replace("| Luxury Real Estate, DarGlobal", "").strip(), "text": text[:12000]}
+            "title": title.replace("| Luxury Real Estate, DarGlobal", "").strip(), "text": text[:12000],
+            "images": imgs[:4]}
 
 
 def fetch_plain(urls, delay):

@@ -1,75 +1,258 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Property Chatbot</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Property Assistant</title>
+<meta name="description" content="Ask about DarGlobal projects and Wasalt property listings in Saudi Arabia.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f6f5f2;--panel:#fff;--ink:#1d1d1b;--muted:#6b6a66;--line:#e4e2dc;--accent:#8a6d3b;--user:#1d1d1b;--user-ink:#fff}
-@media (prefers-color-scheme:dark){:root{--bg:#141413;--panel:#1e1e1c;--ink:#ecebe6;--muted:#9a9890;--line:#2e2e2b;--accent:#c9a46a;--user:#ecebe6;--user-ink:#141413}}
+:root{
+  --bg:#f5f3ee;--surface:#ffffff;--surface-2:#faf8f4;--ink:#1c1b19;--muted:#6e6a62;--line:#e7e2d8;
+  --gold:#a8824a;--gold-ink:#ffffff;--gold-soft:#f3ebdd;--user:#1c1b19;--user-ink:#fff;
+  --wasalt:#0b7a5b;--wasalt-soft:#e2f2ec;--dg:#8a6a37;--dg-soft:#f3ebdd;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+  --radius:16px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121211;--surface:#1b1b19;--surface-2:#22211f;--ink:#efece6;--muted:#a29d93;--line:#2f2d2a;
+  --gold:#d0a865;--gold-ink:#1b1b19;--gold-soft:#2c2619;--user:#efece6;--user-ink:#121211;
+  --wasalt:#43c59e;--wasalt-soft:#13302a;--dg:#d0a865;--dg-soft:#2c2619;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35)}}
+:root[data-theme="dark"]{
+  --bg:#121211;--surface:#1b1b19;--surface-2:#22211f;--ink:#efece6;--muted:#a29d93;--line:#2f2d2a;
+  --gold:#d0a865;--gold-ink:#1b1b19;--gold-soft:#2c2619;--user:#efece6;--user-ink:#121211;
+  --wasalt:#43c59e;--wasalt-soft:#13302a;--dg:#d0a865;--dg-soft:#2c2619;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35)}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
-header{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
-header h1{margin:0;font-size:17px;font-weight:600}header p{margin:2px 0 0;color:var(--muted);font-size:13px}
-main{flex:1;overflow-y:auto;padding:16px}
-.wrap{max-width:760px;margin:0 auto}
-.msg{margin:0 0 14px;display:flex}.msg.user{justify-content:flex-end}
-.bubble{max-width:85%;padding:10px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);overflow-wrap:anywhere}
-.user .bubble{background:var(--user);color:var(--user-ink);border-color:var(--user)}
-.bubble p{margin:.3em 0}.bubble ul{margin:.3em 0;padding-left:1.2em}.bubble a{color:var(--accent)}
-.meta{font-size:12px;color:var(--muted);margin-top:6px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}
-.chips button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
-form{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--panel)}
-form .wrap{display:flex;gap:8px;width:100%}
-textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--ink);min-height:44px;max-height:140px}
-button.send{border:0;border-radius:10px;padding:0 18px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
-button:disabled{opacity:.5;cursor:default}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+[dir=rtl],.ar{font-family:"Noto Sans Arabic",Inter,sans-serif}
+a{color:var(--gold)}
+.wrap{max-width:860px;margin:0 auto;width:100%}
+
+/* header */
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--gold),#6d532c);display:grid;place-items:center;color:#fff;flex:none}
+.brand h1{margin:0;font:600 17px/1.2 "Playfair Display",Georgia,serif;letter-spacing:.2px}
+.brand p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.hdr-actions{margin-left:auto;display:flex;gap:6px}
+.icon-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);width:36px;height:36px;border-radius:10px;display:grid;place-items:center;cursor:pointer}
+.icon-btn:hover{background:var(--surface-2)}
+
+/* chat */
+main{flex:1;overflow-y:auto;scroll-behavior:smooth}
+#inner{padding:20px 16px 8px}
+.hero{text-align:center;padding:28px 4px 8px}
+.hero h2{font:600 clamp(24px,4.4vw,34px)/1.2 "Playfair Display",Georgia,serif;margin:0 0 8px}
+.hero p{color:var(--muted);margin:0 auto 20px;max-width:560px}
+.pills{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.pill{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.pill b{color:var(--ink);font-weight:600}
+.sugg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;text-align:left}
+.sugg button{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:14px;font:inherit;cursor:pointer;text-align:start;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+.sugg button:hover{transform:translateY(-2px);border-color:var(--gold)}
+.sugg .ico{font-size:20px;line-height:1}
+.sugg small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+
+.msg{display:flex;gap:10px;margin:0 0 18px;animation:in .25s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.msg.user{justify-content:flex-end}
+.avatar{width:30px;height:30px;border-radius:9px;flex:none;background:var(--gold-soft);color:var(--gold);display:grid;place-items:center;font-size:15px;margin-top:2px}
+.body{min-width:0;max-width:calc(100% - 40px)}
+.user .body{max-width:80%}
+.bubble{padding:12px 15px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--line);overflow-wrap:anywhere;box-shadow:var(--shadow)}
+.user .bubble{background:var(--user);color:var(--user-ink);border-color:var(--user);border-bottom-right-radius:6px}
+.bot .bubble{border-top-left-radius:6px}
+.bubble p{margin:.35em 0}.bubble ul,.bubble ol{margin:.35em 0;padding-inline-start:1.25em}.bubble li{margin:.15em 0}
+.bubble h3,.bubble h4{margin:.6em 0 .25em;font-size:15px}
+.bubble blockquote{margin:.5em 0;padding:.4em .8em;border-inline-start:3px solid var(--gold);background:var(--surface-2);border-radius:6px;color:var(--muted)}
+.bubble hr{border:0;border-top:1px solid var(--line);margin:.7em 0}
+.tbl{overflow-x:auto;margin:.5em 0}
+.bubble table{border-collapse:collapse;font-size:13.5px;min-width:100%}
+.bubble th,.bubble td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:start;white-space:nowrap}
+.bubble th{background:var(--surface-2);font-weight:600}
+.meta{font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.typing{display:inline-flex;gap:4px;align-items:center;padding:4px 0}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.wait{font-size:12px;color:var(--muted);margin-inline-start:8px}
+
+/* property cards */
+.cards{display:flex;gap:12px;overflow-x:auto;padding:12px 2px 6px;scroll-snap-type:x mandatory}
+.cards::-webkit-scrollbar{height:6px}.cards::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.card{flex:0 0 250px;scroll-snap-align:start;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-2px);border-color:var(--gold)}
+.ph{position:relative;aspect-ratio:16/10;background:linear-gradient(135deg,var(--gold-soft),var(--surface-2));overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s}
+.ph .fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:40px;opacity:.75}
+.ph img+.fallback{display:none}
+.ph .tag{position:absolute;top:8px;left:8px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;backdrop-filter:blur(4px);text-transform:capitalize}
+.ph .src{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px}
+.src.wasalt{background:var(--wasalt-soft);color:var(--wasalt)}.src.darglobal{background:var(--dg-soft);color:var(--dg)}
+.ph .count{position:absolute;bottom:8px;right:8px;font-size:11px;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;cursor:pointer}
+.cb{padding:11px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+.price{font-weight:700;font-size:15.5px;color:var(--gold)}
+.ct{font-weight:600;font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.loc{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.specs{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:auto;padding-top:6px;border-top:1px dashed var(--line)}
+.cta{font-size:12.5px;font-weight:600;color:var(--gold);margin-top:4px}
+
+/* composer */
+.composer{border-top:1px solid var(--line);background:var(--surface);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.box{display:flex;gap:8px;align-items:flex-end;background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:6px 6px 6px 14px;transition:border-color .15s}
+.box:focus-within{border-color:var(--gold)}
+textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;padding:8px 0;max-height:140px;min-height:24px}
+.send{border:0;width:40px;height:40px;border-radius:12px;background:var(--gold);color:var(--gold-ink);display:grid;place-items:center;cursor:pointer;flex:none}
+.send:disabled{opacity:.45;cursor:default}
+.foot{font-size:11.5px;color:var(--muted);text-align:center;margin-top:7px}
+@media (max-width:520px){.card{flex-basis:78%}.hero{padding-top:12px}.brand p{display:none}}
 </style>
 </head>
 <body>
-<header><div class="wrap"><h1>DarGlobal &amp; Wasalt Property Assistant</h1><p id="stats">Answers from publicly scraped listings and project pages · free model via OpenRouter</p></div></header>
-<main id="log"><div class="wrap" id="inner">
-  <div class="msg"><div class="bubble">Hi! Ask me about DarGlobal projects or Wasalt listings in Saudi Arabia: prices, locations, bedrooms, amenities.</div></div>
-  <div class="chips" id="chips">
-    <button>3-bedroom apartments for rent in Riyadh</button>
-    <button>Villas for sale in Dhahran</button>
-    <button>Which countries does DarGlobal have projects in?</button>
-    <button>Tell me about Trump Tower Jeddah</button>
-    <button>شقق للإيجار في الرياض</button>
+<header><div class="wrap">
+  <div class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div>
+  <div class="brand"><h1>Property Assistant</h1><p id="stats">DarGlobal projects · Wasalt listings · AI answers</p></div>
+  <div class="hdr-actions">
+    <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
+    <button class="icon-btn" id="clear" title="New chat" aria-label="New chat"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
   </div>
-</div></main>
-<form id="f"><div class="wrap"><textarea id="q" rows="1" placeholder="Ask about a property…" required></textarea><button class="send" id="b">Send</button></div></form>
+</div></header>
+
+<main id="log"><div class="wrap" id="inner"></div></main>
+
+<div class="composer"><div class="wrap">
+  <form class="box" id="f">
+    <textarea id="q" rows="1" placeholder="Ask about villas, apartments, prices, projects…  (English or العربية)" aria-label="Message"></textarea>
+    <button class="send" id="b" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+  </form>
+  <div class="foot">Answers come from publicly available DarGlobal &amp; Wasalt.sa pages and may be out of date. Verify on the official sites.</div>
+</div></div>
+
+<template id="welcome">
+  <section class="hero">
+    <h2>Find your next property</h2>
+    <p>Ask about luxury DarGlobal developments worldwide or thousands of Wasalt listings across Saudi Arabia.</p>
+    <div class="pills" id="pills"></div>
+    <div class="sugg">
+      <button data-q="3 bedroom apartments for rent in Riyadh"><span class="ico">🏢</span><span>3-bed apartments for rent in Riyadh<small>Wasalt listings</small></span></button>
+      <button data-q="Villas for sale in Dhahran"><span class="ico">🏡</span><span>Villas for sale in Dhahran<small>Wasalt listings</small></span></button>
+      <button data-q="Tell me about Trump Tower Jeddah"><span class="ico">🌆</span><span>Tell me about Trump Tower Jeddah<small>DarGlobal project</small></span></button>
+      <button data-q="Which countries does DarGlobal have projects in?"><span class="ico">🌍</span><span>Where does DarGlobal build?<small>DarGlobal portfolio</small></span></button>
+      <button data-q="Land for sale in Jazan"><span class="ico">📐</span><span>Land for sale in Jazan<small>Wasalt listings</small></span></button>
+      <button data-q="شقق للإيجار في الرياض" class="ar"><span class="ico">🕌</span><span dir="rtl">شقق للإيجار في الرياض<small>بالعربية</small></span></button>
+    </div>
+  </section>
+</template>
+
 <script>
-const inner=document.getElementById('inner'),log=document.getElementById('log'),q=document.getElementById('q'),b=document.getElementById('b');
-const history=[];
-const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function md(s){ // tiny, safe markdown: links, bold, bullets, paragraphs
-  s=esc(s).replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
-   .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>')
-   .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
-  let out='',inList=false;
-  for(const line of s.split('\n')){const m=line.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)/);
-    if(m){if(!inList){out+='<ul>';inList=true}out+='<li>'+m[1]+'</li>'}
-    else{if(inList){out+='</ul>';inList=false}if(line.trim())out+='<p>'+line+'</p>'}}
-  return out+(inList?'</ul>':'');
+const $=s=>document.querySelector(s), inner=$('#inner'), log=$('#log'), q=$('#q'), b=$('#b');
+let history=[], busy=false;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isAr=s=>/[؀-ۿ]/.test(s);
+const safeUrl=u=>/^https?:\/\//i.test(u)?u:'#';
+
+/* ---------- minimal safe markdown: headings, bold/italic, links, lists, tables, quotes, hr ---------- */
+function inline(s){
+  return esc(s)
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,(m,t,u)=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`)
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">link ↗</a>')
+    .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|\W)\*([^*\n]+)\*(?=\W|$)/g,'$1<i>$2</i>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>');
 }
-function add(role,html,meta){const d=document.createElement('div');d.className='msg '+role;
-  d.innerHTML='<div class="bubble">'+html+(meta?'<div class="meta">'+meta+'</div>':'')+'</div>';inner.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+function md(src){
+  const L=src.replace(/\r/g,'').split('\n'); let out='',list=null;
+  const close=()=>{if(list){out+=`</${list}>`;list=null}};
+  for(let i=0;i<L.length;i++){
+    const line=L[i];
+    if(/^\s*\|.*\|\s*$/.test(line)&&i+1<L.length&&/^\s*\|?\s*:?-{2,}/.test(L[i+1])){ // table
+      close(); const row=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      let h='<div class="tbl"><table><thead><tr>'+row(line).map(c=>`<th>${inline(c)}</th>`).join('')+'</tr></thead><tbody>'; i++;
+      while(i+1<L.length&&/^\s*\|/.test(L[i+1])){i++;h+='<tr>'+row(L[i]).map(c=>`<td>${inline(c)}</td>`).join('')+'</tr>'}
+      out+=h+'</tbody></table></div>'; continue;
+    }
+    let m;
+    if(m=line.match(/^\s*#{1,6}\s+(.*)/)){close();out+=`<h3>${inline(m[1])}</h3>`;continue}
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(line)){close();out+='<hr>';continue}
+    if(m=line.match(/^\s*>\s?(.*)/)){close();out+=`<blockquote>${inline(m[1])}</blockquote>`;continue}
+    if(m=line.match(/^\s*[-*•]\s+(.*)/)){if(list!=='ul'){close();out+='<ul>';list='ul'}out+=`<li>${inline(m[1])}</li>`;continue}
+    if(m=line.match(/^\s*\d+[.)]\s+(.*)/)){if(list!=='ol'){close();out+='<ol>';list='ol'}out+=`<li>${inline(m[1])}</li>`;continue}
+    if(!line.trim()){close();continue}
+    if(list&&/^\s{2,}/.test(line)){out=out.replace(/<\/li>$/,'<br>'+inline(line.trim())+'</li>');continue}
+    close(); out+=`<p>${inline(line)}</p>`;
+  }
+  close(); return out;
+}
+
+/* ---------- property cards ---------- */
+const ICON={villa:'🏡',apartment:'🏢',land:'📐',building:'🏬',floor:'🏘️',showroom:'🏪',warehouse:'🏭','office space':'💼','rest house':'🌴',chalet:'🏖️',hotel:'🏨'};
+function cardHTML(c){
+  const icon=c.source==='darglobal'?'🌇':(ICON[(c.type||'').toLowerCase()]||'🏠');
+  const imgs=(c.images&&c.images.length?c.images:(c.image?[c.image]:[])).map(safeUrl);
+  const img=imgs.length?`<img src="${esc(imgs[0])}" alt="${esc(c.title)}" loading="lazy" referrerpolicy="no-referrer" data-i="0" data-imgs='${esc(JSON.stringify(imgs))}' onerror="this.remove()">`:'';
+  const tag=c.source==='wasalt'?[c.type,c.purpose&&('for '+c.purpose)].filter(Boolean).join(' · '):'Project';
+  const specs=c.source==='wasalt'?[c.beds&&`🛏 ${c.beds}`,c.baths&&`🛁 ${c.baths}`,c.area&&`📏 ${Math.round(c.area)} m²`].filter(Boolean):[];
+  return `<a class="card" href="${esc(safeUrl(c.url))}" target="_blank" rel="noopener">
+    <div class="ph">${img}<div class="fallback">${icon}</div>
+      <span class="tag">${esc(tag)}</span><span class="src ${c.source}">${c.source==='wasalt'?'Wasalt':'DarGlobal'}</span>
+      ${imgs.length>1?`<span class="count" title="Next photo">1/${imgs.length} ›</span>`:''}</div>
+    <div class="cb">
+      ${c.price?`<div class="price">${esc(c.price)}</div>`:''}
+      <div class="ct">${esc(c.title)}</div>
+      ${c.location?`<div class="loc">📍 ${esc(c.location)}</div>`:''}
+      ${c.summary?`<div class="loc" style="white-space:normal">${esc(c.summary.slice(0,110))}…</div>`:''}
+      ${specs.length?`<div class="specs">${specs.map(esc).join('<span>·</span>')}</div>`:''}
+      <div class="cta">View on ${c.source==='wasalt'?'Wasalt.sa':'DarGlobal'} →</div>
+    </div></a>`;
+}
+inner.addEventListener('click',e=>{ // cycle photos without leaving the page
+  const cnt=e.target.closest('.count'); if(!cnt)return; e.preventDefault();
+  const img=cnt.parentElement.querySelector('img'); if(!img)return;
+  const imgs=JSON.parse(img.dataset.imgs), i=(+img.dataset.i+1)%imgs.length;
+  img.dataset.i=i; img.src=imgs[i]; cnt.textContent=`${i+1}/${imgs.length} ›`;
+});
+
+/* ---------- chat ---------- */
+function add(role,html,rtl){
+  const d=document.createElement('div'); d.className='msg '+role;
+  d.innerHTML=(role==='bot'?'<div class="avatar">✦</div>':'')+`<div class="body"><div class="bubble"${rtl?' dir="rtl"':''}>${html}</div></div>`;
+  inner.appendChild(d); log.scrollTop=log.scrollHeight; return d;
+}
+function welcome(){
+  inner.innerHTML=''; inner.appendChild($('#welcome').content.cloneNode(true));
+  inner.querySelectorAll('.sugg button').forEach(x=>x.onclick=()=>send(x.dataset.q));
+  fetch('/api/stats').then(r=>r.json()).then(j=>{const s=j.sources||{};
+    $('#pills').innerHTML=`<span class="pill"><b>${(s.wasalt||0).toLocaleString()}</b> Wasalt listings</span><span class="pill"><b>${s.darglobal||0}</b> DarGlobal pages</span><span class="pill">Free AI model via OpenRouter</span>`;
+  }).catch(()=>{});
+}
 async function send(text){
-  if(!text.trim())return; document.getElementById('chips')?.remove();
-  add('user',esc(text)); q.value=''; b.disabled=true;
-  const p=add('bot','<span class="meta">Thinking…</span>');
-  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history})});
+  text=(text||'').trim(); if(!text||busy)return;
+  inner.querySelector('.hero')?.remove();
+  busy=true; b.disabled=true; q.value=''; grow();
+  add('user',esc(text),isAr(text));
+  const p=add('bot','<span class="typing"><i></i><i></i><i></i></span><span class="wait">Searching listings…</span>');
+  const t0=Date.now(), tick=setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);const w=p.querySelector('.wait');
+    if(w)w.textContent=s<6?'Searching listings…':s<25?`Writing answer… ${s}s`:`Free models can be slow, still working… ${s}s`},1000);
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history})});
     const j=await r.json(); if(!r.ok)throw new Error(j.detail||r.statusText);
-    p.querySelector('.bubble').innerHTML=md(j.answer)+'<div class="meta">'+esc(j.model)+' · '+j.latency_s+'s</div>';
+    const body=p.querySelector('.body'), bub=p.querySelector('.bubble');
+    if(isAr(j.answer))bub.setAttribute('dir','rtl');
+    bub.innerHTML=md(j.answer)+`<div class="meta"><span>⚡ ${esc((j.model||'').split('/').pop())}</span><span>${j.latency_s}s</span></div>`;
+    if(j.cards&&j.cards.length){const c=document.createElement('div');c.className='cards';c.innerHTML=j.cards.map(cardHTML).join('');body.appendChild(c)}
     history.push({role:'user',content:text},{role:'assistant',content:j.answer});
-  }catch(e){p.querySelector('.bubble').innerHTML='<span class="meta">Error: '+esc(String(e.message||e))+'</span>'}
-  b.disabled=false; q.focus(); log.scrollTop=log.scrollHeight;
+  }catch(e){p.querySelector('.bubble').innerHTML=`<span style="color:#c0392b">Sorry, something went wrong: ${esc(e.message||e)}</span><div class="meta">Please try again in a moment.</div>`}
+  clearInterval(tick); busy=false; b.disabled=false; q.focus(); log.scrollTop=log.scrollHeight;
 }
-document.getElementById('f').onsubmit=e=>{e.preventDefault();send(q.value)};
+if(matchMedia('(max-width:520px)').matches)q.placeholder='Ask about properties…';
+function grow(){q.style.height='auto';q.style.height=Math.min(q.scrollHeight,140)+'px'}
+q.addEventListener('input',grow);
 q.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(q.value)}});
-document.querySelectorAll('#chips button').forEach(x=>x.onclick=()=>send(x.textContent));
-fetch('/api/stats').then(r=>r.json()).then(j=>{const s=j.sources||{};document.getElementById('stats').textContent=`${s.darglobal||0} DarGlobal pages · ${s.wasalt||0} Wasalt listings · free model via OpenRouter`}).catch(()=>{});
+$('#f').onsubmit=e=>{e.preventDefault();send(q.value)};
+$('#clear').onclick=()=>{history=[];welcome();q.focus()};
+$('#theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){}};
+try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+welcome();
 </script>
 </body>
 </html>
