@@ -27,7 +27,7 @@ OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
 # "openrouter/free" routes to any currently-available free model; the rest are fallbacks.
 MODELS = [m.strip() for m in os.getenv(
     "OPENROUTER_MODELS",
-    "openrouter/free,nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-31b-it:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-26b-a4b-it:free,baidu/ernie-5.5-flash-preview:free,inclusionai/ling-3.2-flash:free,thinkingmachines/inkling-2-small:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-31b-it:free,baidu/ernie-5.5-flash-preview:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-26b-a4b-it:free,inclusionai/ling-3.2-flash:free,openrouter/free",
 ).split(",") if m.strip()]
 TOP_K = int(os.getenv("TOP_K", "12"))
 
@@ -131,9 +131,31 @@ def parse_budget(q):
     return v * mult
 
 
+AR2EN = {
+    "الرياض": "riyadh", "جدة": "jeddah", "جده": "jeddah", "الدمام": "dammam", "الخبر": "khobar", "مكة": "makkah",
+    "المدينة": "madinah", "الظهران": "dhahran", "الطائف": "taif", "أبها": "abha", "ابها": "abha", "بريدة": "buraidah",
+    "تبوك": "tabuk", "حائل": "hail", "جازان": "jazan", "الأحساء": "ahsa", "الاحساء": "ahsa", "الجبيل": "jubail",
+    "ينبع": "yanbu", "نجران": "najran", "الخرج": "kharj", "القطيف": "qatif", "خميس مشيط": "khamis mushait",
+    "شقق": "apartment", "شقة": "apartment", "فلل": "villa", "فيلا": "villa", "فيلل": "villa", "أرض": "land",
+    "ارض": "land", "أراضي": "land", "اراضي": "land", "عمارة": "building", "عماره": "building", "مستودع": "warehouse",
+    "معرض": "showroom", "مكتب": "office", "دور": "floor", "استراحة": "rest house", "شاليه": "chalet",
+    "للإيجار": "rent", "للايجار": "rent", "إيجار": "rent", "ايجار": "rent", "للبيع": "sale", "بيع": "sale",
+    "شراء": "buy", "غرف": "bedroom", "غرفة": "bedroom", "مليون": "million", "ألف": "thousand", "الف": "thousand",
+    "أقل من": "under", "اقل من": "under", "دار جلوبال": "darglobal", "مشروع": "project", "مشاريع": "project",
+    "ترامب": "trump", "عمان": "oman", "دبي": "dubai", "قطر": "qatar", "إسبانيا": "spain", "لندن": "london",
+}
+
+
+def normalize(q):
+    """Append English equivalents of Arabic keywords so Arabic questions match the English listing text."""
+    extra = [en for ar, en in AR2EN.items() if ar in q]
+    return f"{q} {' '.join(extra)}" if extra else q
+
+
 def retrieve(q, k=TOP_K):
     if not BM25:
         return []
+    q = normalize(q)
     ql = q.lower()
     scores = BM25.get_scores(tok(q))
     want_dg = any(w in ql for w in ["darglobal", "dar global", "trump", "project", "developer", "missoni", "aida", "w residences"])
@@ -154,7 +176,7 @@ def retrieve(q, k=TOP_K):
                 s += 3
             st = (d.get("sub_type") or "").lower()
             if st and re.search(r"\b" + re.escape(st.rstrip("s")) + r"(e?s)?\b", ql):
-                s += 3
+                s += 4
             if purpose and d.get("purpose") == purpose:
                 s += 1.5
             if beds and str(d.get("bedrooms")) == beds.group(1):
@@ -175,6 +197,14 @@ def retrieve(q, k=TOP_K):
             continue
         seen.add(key)
         out.append(DOCS[i])
+    # if the user asked for a property type that the top results lack (e.g. no villas in that city),
+    # add the best-scoring listings of that type from anywhere so the bot can offer alternatives
+    types = {(d.get("sub_type") or "").lower() for d in DOCS if d.get("sub_type")}
+    wanted = [t for t in types if re.search(r"\b" + re.escape(t.rstrip("s")) + r"(e?s)?\b", ql)]
+    if wanted and not any((d.get("sub_type") or "").lower() in wanted for d in out):
+        extra = [DOCS[i] for s, i in ranked if (DOCS[i].get("sub_type") or "").lower() in wanted
+                 and (not purpose or DOCS[i].get("purpose") == purpose)][:4]
+        out = out[: max(0, k - len(extra))] + extra
     return out
 
 
@@ -183,6 +213,8 @@ SYSTEM = """You are a helpful real-estate assistant. You answer ONLY from the CO
 from public pages of DarGlobal (darglobal.co.uk — international luxury developer) and Wasalt (wasalt.sa — Saudi property portal).
 Rules:
 - Use only facts in CONTEXT; if the answer isn't there, say so and suggest checking the live website.
+- If nothing matches exactly (e.g. no villas in the requested city), say so clearly, then offer the closest
+  matches from CONTEXT (same type in other cities, or other types in that city) and label them as alternatives.
 - When recommending listings, give title, location, price, key specs and the URL as a markdown link.
 - Cite the source on every factual answer, e.g. "Source: Wasalt.sa" or "Source: DarGlobal".
 - Prices/availability may have changed since scraping — remind the user to verify on the live site.
